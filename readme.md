@@ -7,3 +7,4 @@
 	* You can clear the cells, or choose a special cell initialization in the selection bar.
 	* You can change the position of camera with mousing draging. By  scrolling the mouse wheel you can change the distance between camera and grid.
 # Screenshot
+![Demo1](https://github.com/ChaunceyKiwi/GameOfLife/blob/master/demo1.jpg)
