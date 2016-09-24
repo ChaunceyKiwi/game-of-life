@@ -1,0 +1,169 @@
+<html>
+<head>
+    <title>LifeGame</title>
+    <style>
+        body { margin: 0; }
+        canvas { width: 100%; height: 100% }
+    </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <script src="js/three.min.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/lifeGame.js"></script>
+</head>
+<body><br>
+<div id="ModelSpace" class="col-md-12 col-sm-12 col-lg-12"></div>
+
+<div class="col-md-6 col-sm-6 col-lg-6" style="margin-top: 20px">
+
+    <div class="col-md-3 col-sm-3 col-lg-3">
+        <select class="form-control" onchange="initSituation(this.value)">
+            <option>Clear</option>
+            <option>Glider</option>
+            <option>Small Exploder</option>
+            <option>Exploder</option>
+            <option>10 Cell Row</option>
+            <option>Lightweight Spaceship </option>
+            <option>Tumbler </option>
+        </select>
+    </div>
+
+    <div class="col-md-6 col-sm-6 col-lg-6">
+        <button class="btn btn-danger" onclick="update()">Next</button>
+        <button class="btn btn-info" id="startAndStop" onclick="toggle()">Start</button>
+        <button class="btn btn-success" onclick="insert()">AddCube</button>
+    </div>
+
+    <br>
+    <div class="col-md-6 col-sm-6 col-lg-6" style="margin-top: 20px; margin-left: -10px">
+        <p id="range">Speed: 1 updates per second</p>
+        <input type="range" id="updateSpeed" value="1" max="10" onchange="updateSpeed(this.value)">
+    </div>
+</div>
+
+<script>
+    /* Custom setting */
+    var size = 100, step = 5;
+    var len = size * 2 / step; // length of the square border
+    var shift = len / 2;
+    var start = 0;
+
+    /* Below are default value (better do not change its value) */
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setClearColor( 0xf0f0f0 );
+
+    var voxelArray = new Array(len);
+    var voxelArrayFlag = new Array(len);
+    var voxelArrayFlagTemp = new Array(len);
+
+    for (var i = 0; i < len; i++) {
+        voxelArray[i] = new Array(len);
+        voxelArrayFlag[i] = new Array(len);
+        voxelArrayFlagTemp[i] = new Array(len);
+    }
+
+    for (var i = 0; i < len; i++)
+        for (var j = 0; j < len; j++)
+            voxelArrayFlag[i][j] = 0;
+
+    init();
+    initialize();
+
+    function toggle(){
+        start = 1 - start;
+        if(start == 0){
+            document.getElementById("startAndStop").style.backgroundColor = "#5BC0DE";
+            document.getElementById("startAndStop").style.borderColor = "#5BC0DE";
+            document.getElementById("startAndStop").textContent = "Start";
+        }
+        else{
+            document.getElementById("startAndStop").style.backgroundColor = "#F0AD4E";
+            document.getElementById("startAndStop").style.borderColor = "#F0AD4E";
+            document.getElementById("startAndStop").textContent = "Stop";
+        }
+    }
+
+    function addCube(x, y){
+        if(voxelArrayFlag[x + shift][y + shift] == 0) {
+            var cubeGeo = new THREE.BoxGeometry(step, step, step);
+            var cubeMaterial = new THREE.MeshLambertMaterial({color:  Math.random() * 0xffffff});
+            voxelArray[x + shift][y + shift] = new THREE.Mesh(cubeGeo, cubeMaterial);
+            voxelArray[x + shift][y + shift].position.set(step/2 + step * x, step/2, -step/2 - step * y);
+            scene.add(voxelArray[x + shift][y + shift]);
+            voxelArrayFlag[x + shift][y + shift] = 1;
+        }
+    }
+
+    function removeCube(x, y){
+        if(voxelArrayFlag[x + shift][y + shift] == 1) {
+            scene.remove(voxelArray[x + shift][y + shift]);
+            voxelArrayFlag[x + shift][y + shift] = 0;
+        }
+    }
+
+    function myTimer() {
+        if(start == 1){
+            var speed = document.getElementById("updateSpeed").value;
+            for (var i = 0; i < speed; i++)
+                update();
+        }
+    }
+
+
+
+    function init(){
+        setInterval(myTimer, 1000);
+        renderer.setSize(window.innerWidth * 2/3, window.innerHeight * 2/3);
+        document.getElementById("ModelSpace").appendChild(renderer.domElement);
+
+        // grid
+        var geometry = new THREE.Geometry();
+        for (var i = -size; i <= size; i += step) {
+            geometry.vertices.push(new THREE.Vector3(-size, 0, i));
+            geometry.vertices.push(new THREE.Vector3(size, 0, i));
+            geometry.vertices.push(new THREE.Vector3(i, 0, -size));
+            geometry.vertices.push(new THREE.Vector3(i, 0, size));
+        }
+        var material = new THREE.LineBasicMaterial( { color: 0x000000, opacity: 0.2, transparent: true } );
+        var line = new THREE.LineSegments(geometry, material);
+        scene.add(line);
+
+        // Lights
+        var ambientLight = new THREE.AmbientLight( 0x606060 );
+        scene.add( ambientLight );
+        var directionalLight = new THREE.DirectionalLight( 0xffffff );
+        directionalLight.position.set( 1, 0.75, 0.5 ).normalize();
+        scene.add( directionalLight );
+
+        camera.position.z = size * 1.2;
+        camera.position.y = size * 1.2;
+
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+    }
+
+    var render = function () {
+        requestAnimationFrame( render );
+        renderer.render(scene, camera);
+        controls.update();
+    };
+
+    render();
+
+    function updateSpeed(newValue){
+        setInterval(myTimer, 1000/newValue);
+        document.getElementById("range").innerHTML= "Speed: " + newValue + " updates per second";
+    }
+
+    function initSituation(value) {
+        if(value == "Clear") changePattern(0);
+        if(value == "Glider") changePattern(1);
+        if(value == "Small Exploder") changePattern(2);
+        if(value == "Exploder") changePattern(3);
+        if(value == "10 Cell Row") changePattern(4);
+        if(value == "Lightweight Spaceship") changePattern(5);
+        if(value == "Tumbler") changePattern(6);
+    }
+</script>
+</body>
+</html>
